@@ -13,35 +13,36 @@ def render_progressbar(total, iteration, prefix='', suffix='', length=30, fill='
     return '{0} |{1}| {2}% {3}'.format(prefix, pbar, percent, suffix)
 
 
-def notify_progress(secs_left, chat_id, message_id, total_seconds):
-    progbar = render_progressbar(total_seconds, total_seconds - secs_left)
-    if secs_left >= 0:  
-        bot.update_message(
-            chat_id,
-            message_id,
-            f"Осталось: {secs_left} сек\n{progbar}"
-        )
+def create_notify_progress(bot):
+    def notify_progress(secs_left, chat_id, message_id, total_seconds):
+        progbar = render_progressbar(total_seconds, total_seconds - secs_left)
+        if secs_left >= 0:  
+            bot.update_message(
+                chat_id,
+                message_id,
+                f"Осталось: {secs_left} сек\n{progbar}"
+            )
 
     if secs_left == 0:
         bot.send_message(chat_id, "Время вышло")
+    return notify_progress
 
-
-def try_message(chat_id, text):
-    seconds = parse(text)
-    message_id = bot.send_message(chat_id,"Осталось: {} сек".format(seconds))
-    progbar = render_progressbar
-    bot.create_countdown(
-        seconds,
-        notify_progress,
-        chat_id = chat_id,
-        message_id = message_id,
-        total_seconds = seconds
-    )
-
+def create_try_message(bot):
+    def try_message(chat_id, text):
+        seconds = parse(text)
+        message_id = bot.send_message(chat_id,"Осталось: {} сек".format(seconds))
+        progbar = render_progressbar
+        bot.create_countdown(
+            seconds,
+            notify_progress,
+            chat_id = chat_id,
+            message_id = message_id,
+            total_seconds = seconds
+        )
+        return try_message
 
 def main():
     load_dotenv()
-    global bot
     bot = ptbot.Bot(os.getenv('tg_token'))
     bot.reply_on_message(try_message)
     bot.run_bot()
